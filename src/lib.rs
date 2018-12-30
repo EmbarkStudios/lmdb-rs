@@ -120,4 +120,36 @@ mod test_utils {
             tx.commit().expect("tx.commit")
         }
     }
+
+    // verify that the map file is sparsly allocated
+    // this used to fail on earlier versions of LMDB on Windows, before ITS#8324
+    #[test]
+    fn verify_sparse() {
+        const HEIGHT_KEY: [u8; 1] = [0];
+
+        let dir = TempDir::new("test").unwrap();
+
+        {
+            let env = {
+                let mut builder = Environment::new();
+                builder.set_map_size(1_000_000_000);
+                builder.open(dir.path()).expect("open lmdb env")
+            };
+            let db = env.open_db(None).unwrap();
+
+            for height in 0..1000 {
+                let mut value = [0u8; 8];
+                LittleEndian::write_u64(&mut value, height);
+                let mut tx = env.begin_rw_txn().expect("begin_rw_txn");
+                tx.put(db, &HEIGHT_KEY, &value, WriteFlags::empty())
+                    .expect("tx.put");
+                tx.commit().expect("tx.commit")
+            }
+        }
+
+        let size = std::fs::metadata(dir.path().join("data.mdb"))
+            .expect("get file size")
+            .len();
+        assert!(size < 1_000_000);
+    }
 }
