@@ -28,7 +28,7 @@ members = [
 [dependencies]
 bitflags = "1"
 libc = "0.2"
-lmdb-sys = "0.8.0"
+lmdb-sys = { path = "lmdb-sys" }
 
 [dev-dependencies]
 rand = "0.4"
